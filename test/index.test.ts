@@ -12,7 +12,7 @@ const activeProcesses = new Set<ProcbandProcess>()
 
 let stdoutText = ''
 let stderrText = ''
-let initialProcessExitCode: number | undefined
+let initialProcessExitCode: typeof process.exitCode
 
 describe('supervise', () => {
   beforeEach(() => {
