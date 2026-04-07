@@ -52,7 +52,7 @@ type LineBuffer = {
 /**
  * Start supervising a single subprocess.
  *
- * The returned `ProccoliProcess` starts immediately, prefixes child output,
+ * The returned `ProcbandProcess` starts immediately, prefixes child output,
  * exposes line-based matching helpers, and resolves when the process reaches a
  * terminal state with no further restart pending.
  *
@@ -207,18 +207,6 @@ class ProcbandProcessImpl
     return this.finalPromise.then(onfulfilled, onrejected)
   }
 
-  catch<TResult = never>(
-    onrejected?: ((reason: unknown) => TResult | PromiseLike<TResult>) | null,
-  ): Promise<ProcessResult | TResult> {
-    this.markTerminalResultObserved()
-    return this.finalPromise.catch(onrejected)
-  }
-
-  finally(onfinally?: (() => void) | null): Promise<ProcessResult> {
-    this.markTerminalResultObserved()
-    return this.finalPromise.finally(onfinally)
-  }
-
   kill(signal?: KillSignal) {
     const child = this.currentChild
     if (!child) {
@@ -282,7 +270,7 @@ class ProcbandProcessImpl
   ) {
     const attempt = this.attempt
     if (!attempt || attempt.closed) {
-      await this.finalPromise.then(() => undefined)
+      await this.finalPromise
       return
     }
 

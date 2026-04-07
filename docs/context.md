@@ -56,8 +56,8 @@ Supervision adds four behaviors on top of raw `spawn()`:
    `waitFor()`.
 6. When a child exits, `procband` either finalizes or starts a new attempt,
    depending on the restart policy.
-7. A terminal failed exit that nobody observed through `await proc`,
-   `proc.wait()`, or the thenable helpers sets `process.exitCode` and begins
+7. A terminal failed exit that nobody observed through `await proc` or
+   `proc.wait()` sets `process.exitCode` and begins
    stopping any other live `procband` processes in the same parent script.
 8. `await proc` or `await proc.wait()` resolves only after the process is
    terminal and no further restart will happen.
