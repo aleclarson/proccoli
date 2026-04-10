@@ -1,6 +1,6 @@
 {
   "name": "procband",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "description": "Supervise subprocesses from TypeScript: prefix logs, wait for output patterns, and manage lifecycle/restarts.",
   "license": "MIT",
   "author": "Alec Larson",
