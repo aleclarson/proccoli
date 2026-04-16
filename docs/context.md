@@ -36,8 +36,8 @@ Supervision adds five behaviors on top of raw `spawn()`:
 
 - `ProcessConfig`
   Declares one supervised subprocess plus its label, color, restart policy,
-  optional stdin behavior, optional parent-exit signal override, and optional
-  raw `stderr` tee.
+  optional stdin behavior, optional detached spawn mode, optional
+  parent-exit signal override, and optional raw `stderr` tee.
 - `ProcbandProcess`
   The live wrapper returned by `supervise()`. It is a `ChildProcess`-compatible
   handle, a matching surface, a shutdown surface, and a thenable final result.

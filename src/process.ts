@@ -279,6 +279,7 @@ class ProcbandProcessImpl
 
     const child = spawn(this.config.command, this.config.args ?? [], {
       cwd: this.config.cwd,
+      detached: this.config.detached,
       env: this.config.env,
       stdio: [this.config.stdin ? 'pipe' : 'ignore', 'pipe', 'pipe'],
     }) as SupervisedChild

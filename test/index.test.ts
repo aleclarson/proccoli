@@ -1,3 +1,4 @@
+import { execFileSync } from 'node:child_process'
 import { PassThrough } from 'node:stream'
 import { mkdtemp, readFile } from 'node:fs/promises'
 import { constants, tmpdir } from 'node:os'
@@ -310,6 +311,29 @@ describe('supervise', () => {
     await expect(readFile(counterFile, 'utf8')).resolves.toBe('3')
   })
 
+  it('passes detached through to spawn', async () => {
+    if (process.platform === 'win32') {
+      return
+    }
+
+    const proc = track(
+      supervise({
+        name: 'detached',
+        command: process.execPath,
+        args: ['-e', 'setInterval(() => {}, 1000)'],
+        detached: true,
+      }),
+    )
+
+    expect(proc.pid).toBeTruthy()
+    expect(getProcessGroupId(proc.pid!)).toBe(proc.pid)
+
+    await proc.stop({ killAfterMs: 200 })
+    await expect(proc.wait()).resolves.toMatchObject({
+      name: 'detached',
+    })
+  })
+
   it('stops the spawned process tree', async () => {
     const script = [
       'const { spawn } = await import("node:child_process")',
@@ -576,4 +600,13 @@ async function waitForExit(pid: number, timeoutMs = 3000) {
     await new Promise(resolve => setTimeout(resolve, 25))
   }
   throw new Error(`Timed out waiting for pid ${pid} to exit`)
+}
+
+function getProcessGroupId(pid: number) {
+  return Number.parseInt(
+    execFileSync('ps', ['-o', 'pgid=', '-p', String(pid)], {
+      encoding: 'utf8',
+    }).trim(),
+    10,
+  )
 }

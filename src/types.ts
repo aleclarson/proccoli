@@ -56,6 +56,13 @@ export interface ProcessConfig {
   env?: Record<string, string | undefined>
 
   /**
+   * Whether to spawn the child in a detached process group/session.
+   *
+   * This is passed through to Node.js `spawn()` unchanged.
+   */
+  detached?: boolean
+
+  /**
    * Human-facing label used in prefixed output.
    *
    * Defaults to `name`.
