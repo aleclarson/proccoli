@@ -88,6 +88,15 @@ export interface ProcessConfig {
   stdin?: boolean | Readable
 
   /**
+   * Signal to send when the parent process is shutting down.
+   *
+   * When provided, `procband` uses this signal for parent-driven cleanup on
+   * `SIGINT`, `SIGTERM`, and `exit` instead of mirroring the parent signal or
+   * relying on the platform default.
+   */
+  parentExitSignal?: KillSignal
+
+  /**
    * Automatic restart behavior for terminal child exits.
    *
    * Use `true` for the built-in defaults or provide an explicit policy.

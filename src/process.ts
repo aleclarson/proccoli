@@ -247,7 +247,7 @@ class ProcbandProcessImpl
 
     const child = this.currentChild
     if (child) {
-      killTreeBestEffort(child)
+      killTreeBestEffort(child, this.getParentCleanupSignal())
     }
   }
 
@@ -255,7 +255,7 @@ class ProcbandProcessImpl
     this.shutdownRequested = true
     this.restartDisabled = true
     this.restart.cancelDelay()
-    await this.stopActiveTree(signal, 1000)
+    await this.stopActiveTree(this.getParentCleanupSignal(signal), 1000)
   }
 
   private async stopActiveTree(signal: KillSignal, killAfterMs: number) {
@@ -266,6 +266,12 @@ class ProcbandProcessImpl
     }
 
     await stopChildTree(attempt.child, attempt.close, () => attempt.closed, signal, killAfterMs)
+  }
+
+  private getParentCleanupSignal(): KillSignal | undefined
+  private getParentCleanupSignal(fallback: KillSignal): KillSignal
+  private getParentCleanupSignal(fallback?: KillSignal) {
+    return this.config.parentExitSignal ?? fallback
   }
 
   private spawnAttempt() {

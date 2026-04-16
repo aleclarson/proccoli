@@ -384,6 +384,54 @@ describe('supervise', () => {
     await waitForExit(pid)
   })
 
+  it('uses parentExitSignal for parent signal cleanup', async () => {
+    const proc = track(
+      supervise({
+        name: 'parent-signal-override',
+        command: process.execPath,
+        args: ['-e', 'setInterval(() => {}, 1000)'],
+        parentExitSignal: 'SIGHUP',
+      }),
+    )
+
+    await (
+      proc as ProcbandProcess & {
+        cleanupFromSignal(signal: NodeJS.Signals): Promise<void>
+      }
+    ).cleanupFromSignal('SIGTERM')
+
+    await expect(proc.wait()).resolves.toMatchObject({
+      name: 'parent-signal-override',
+      code: null,
+      exitCode: 128 + constants.signals.SIGHUP,
+      signal: 'SIGHUP',
+    })
+  })
+
+  it('uses parentExitSignal for parent exit cleanup', async () => {
+    const proc = track(
+      supervise({
+        name: 'parent-exit-override',
+        command: process.execPath,
+        args: ['-e', 'setInterval(() => {}, 1000)'],
+        parentExitSignal: 'SIGHUP',
+      }),
+    )
+
+    ;(
+      proc as ProcbandProcess & {
+        cleanupFromExit(): void
+      }
+    ).cleanupFromExit()
+
+    await expect(proc.wait()).resolves.toMatchObject({
+      name: 'parent-exit-override',
+      code: null,
+      exitCode: 128 + constants.signals.SIGHUP,
+      signal: 'SIGHUP',
+    })
+  })
+
   it('propagates the first unobserved failure to the parent exit code', async () => {
     const failing = supervise({
       name: 'fail',
