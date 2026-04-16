@@ -73,7 +73,7 @@ Supervision adds five behaviors on top of raw `spawn()`:
 - React to repeated matching output:
   `proc.match(pattern, callback, options)`
 - Stop the process and its descendants:
-  `proc.stop()`
+  `proc.kill()`
 - Inspect final exit state:
   `await proc` or `await proc.wait()`
 - Take ownership of a process failure:
@@ -95,7 +95,7 @@ Supervision adds five behaviors on top of raw `spawn()`:
 
 # Recommended Patterns
 
-- Use `proc.stop()` for deliberate shutdown initiated by your own script.
+- Use `proc.kill()` for deliberate shutdown initiated by your own script.
 - Reserve `parentExitSignal` for children that expect a specific signal from
   their supervisor during parent-driven cleanup.
 - Await `proc` or call `proc.wait()` when your script intends to own failure
@@ -103,11 +103,10 @@ Supervision adds five behaviors on top of raw `spawn()`:
 
 # Patterns to Avoid
 
-- Do not treat `parentExitSignal` as a replacement for `StopOptions.signal`.
-  The former only changes parent-driven cleanup; the latter controls
-  explicit `proc.stop()` calls.
-- Do not rely on `kill()` for full shutdown when descendants may still be
-  running. `kill()` only targets the current direct child.
+- Do not treat `parentExitSignal` as a replacement for the signal passed to
+  `proc.kill(signal)`. The former only changes parent-driven cleanup.
+- Do not expect `kill(0)` to stop supervision. `kill(0)` remains an existence
+  check for the current child attempt.
 - Do not expect historical log replay from `match()` or `waitFor()`. Matching
   is future-only by design.
 
@@ -131,12 +130,12 @@ Supervision adds five behaviors on top of raw `spawn()`:
 - The wrapper survives restarts, but inherited `pid`, `stdin`, `stdout`,
   `stderr`, and related `ChildProcess` fields always refer to the current active
   child attempt. `stdin` is `null` unless `ProcessConfig.stdin` is enabled.
-- `kill()` only signals the current direct child. `stop()` disables restart and
-  kills the full process tree.
+- `kill()` disables future restarts and kills the full process tree, except for
+  `kill(0)`, which only checks whether the current child attempt exists.
 - Parent cleanup installs both `SIGINT` and `SIGTERM` handlers while any live
   supervised process exists. Set `ProcessConfig.parentExitSignal` to override
   which signal is sent to the child tree during parent-driven cleanup. This
-  does not change the signal used by explicit `proc.stop()` calls.
+  does not change the signal used by explicit `proc.kill()` calls.
 - `stderr` prefixes always use the reserved red, even when a custom process
   color is configured.
 - `ProcessConfig.name` is optional. When omitted, it falls back to the
@@ -153,7 +152,7 @@ Supervision adds five behaviors on top of raw `spawn()`:
   supervision.
 - Unobserved terminal failures do not reject promises. They set the parent
   `process.exitCode` and start stopping sibling `procband` processes.
-- `stop()` may reject if tree-kill fails with a non-`ESRCH` error.
+- `kill()` emits `error` if tree-kill fails with a non-`ESRCH` error.
 
 # Terminology
 

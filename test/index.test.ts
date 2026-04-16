@@ -56,7 +56,7 @@ describe('supervise', () => {
     await Promise.allSettled(
       pending.map(async proc => {
         try {
-          await proc.stop({ killAfterMs: 200 })
+          proc.kill()
         } catch {}
         try {
           await proc.wait()
@@ -328,13 +328,46 @@ describe('supervise', () => {
     expect(proc.pid).toBeTruthy()
     expect(getProcessGroupId(proc.pid!)).toBe(proc.pid)
 
-    await proc.stop({ killAfterMs: 200 })
+    expect(proc.kill()).toBe(true)
     await expect(proc.wait()).resolves.toMatchObject({
       name: 'detached',
     })
   })
 
-  it('stops the spawned process tree', async () => {
+  it('preserves kill(0) as an existence check', async () => {
+    const proc = track(
+      supervise({
+        name: 'kill-zero',
+        command: process.execPath,
+        args: [
+          '-e',
+          [
+            'setTimeout(() => console.log("still-running"), 75)',
+            'setInterval(() => {}, 1000)',
+          ].join(';'),
+        ],
+      }),
+    )
+
+    expect(proc.kill(0)).toBe(true)
+
+    await expect(
+      proc.waitFor('still-running', { timeoutMs: 1000 }),
+    ).resolves.toMatchObject({
+      process: 'kill-zero',
+      stream: 'stdout',
+      line: 'still-running',
+    })
+
+    expect(proc.kill()).toBe(true)
+    await expect(proc.wait()).resolves.toMatchObject({
+      name: 'kill-zero',
+      signal: 'SIGTERM',
+      restarts: 0,
+    })
+  })
+
+  it('kill() stops the spawned process tree', async () => {
     const script = [
       'const { spawn } = await import("node:child_process")',
       'const child = spawn(process.execPath, ["-e", "setInterval(() => {}, 1000)"], { stdio: "ignore" })',
@@ -355,7 +388,7 @@ describe('supervise', () => {
     expect(Number.isInteger(pid)).toBe(true)
     expect(isAlive(pid)).toBe(true)
 
-    await proc.stop({ killAfterMs: 200 })
+    expect(proc.kill()).toBe(true)
     const result = await proc.wait()
 
     expect(result.name).toBe('tree')
@@ -507,7 +540,7 @@ describe('supervise', () => {
       expect(sibling.exitCode).toBeNull()
     } finally {
       try {
-        await sibling.stop({ killAfterMs: 200 })
+        sibling.kill()
       } catch {}
       await sibling.wait().catch(() => {})
       activeProcesses.delete(sibling)
@@ -541,7 +574,7 @@ describe('supervise', () => {
       expect(sibling.exitCode).toBeNull()
     } finally {
       try {
-        await sibling.stop({ killAfterMs: 200 })
+        sibling.kill()
       } catch {}
       await sibling.wait().catch(() => {})
       activeProcesses.delete(sibling)

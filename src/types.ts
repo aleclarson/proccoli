@@ -7,7 +7,7 @@ import type { Readable, Writable } from 'node:stream'
 export type Signals = NodeJS.Signals
 
 /**
- * Signal values accepted by `kill()` and `stop()`.
+ * Signal values accepted by `kill()`.
  */
 export type KillSignal = number | Signals
 
@@ -100,7 +100,7 @@ export interface ProcessConfig {
    * When provided, `procband` uses this signal for parent-driven cleanup on
    * `SIGINT`, `SIGTERM`, and `exit` instead of mirroring the parent signal or
    * relying on the platform default. This only affects parent-driven cleanup;
-   * `proc.stop()` and `proc.kill()` still use their own explicit signals.
+   * `proc.kill()` still uses its own explicit signal argument.
    */
   parentExitSignal?: KillSignal
 
@@ -216,25 +216,6 @@ export type MatchCallback = (event: MatchEvent) => void
 export type Unsubscribe = () => void
 
 /**
- * Options for `stop()`.
- */
-export interface StopOptions {
-  /**
-   * Signal used for the initial process-tree shutdown attempt.
-   *
-   * Defaults to `"SIGTERM"`.
-   */
-  signal?: KillSignal
-
-  /**
-   * Delay before escalating to `SIGKILL`.
-   *
-   * Defaults to `5000`.
-   */
-  killAfterMs?: number
-}
-
-/**
  * Final state for a supervised process after all restart attempts are done.
  */
 export interface ProcessResult {
@@ -328,9 +309,9 @@ export interface ProcbandProcess
   /**
    * Disable future restarts and terminate the active process tree.
    *
-   * `stop()` targets the current child process and any descendants it spawned.
-   * It first uses the configured `signal`, then escalates to `SIGKILL` after
-   * `killAfterMs` if the tree is still alive.
+   * For supervised processes, `kill()` targets the current child process and
+   * any descendants it spawned instead of only the direct child.
+   * `kill(0)` preserves the normal `ChildProcess` existence-check behavior.
    */
-  stop(options?: StopOptions): Promise<void>
+  kill(signal?: KillSignal): boolean
 }

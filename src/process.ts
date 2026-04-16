@@ -27,7 +27,6 @@ import type {
   ProcessResult,
   RgbColor,
   Signals,
-  StopOptions,
   WaitForOptions,
 } from './types.js'
 
@@ -99,7 +98,7 @@ class ProcbandProcessImpl
   private stderrSink: Writable | null
   private stderrSinkActive = true
   private stderrSinkCleanup: (() => void) | null = null
-  private stopPromise: Promise<void> | null = null
+  private shutdownPromise: Promise<void> | null = null
   private shutdownRequested = false
   private restartDisabled = false
   private finalized = false
@@ -202,11 +201,19 @@ class ProcbandProcessImpl
   }
 
   kill(signal?: KillSignal) {
-    const child = this.currentChild
-    if (!child) {
+    if (signal === 0) {
+      return this.currentChild?.kill(0) ?? false
+    }
+
+    if (!this.attempt || this.finalized) {
       return false
     }
-    return child.kill(signal)
+
+    void this.beginShutdown(signal ?? 'SIGTERM', 5000).catch((error: Error) => {
+      this.emit('error', error)
+    })
+
+    return true
   }
 
   ref() {
@@ -223,27 +230,25 @@ class ProcbandProcessImpl
     this.currentChild?.disconnect()
   }
 
-  async stop(options?: StopOptions): Promise<void> {
-    if (this.stopPromise) {
-      return this.stopPromise
-    }
-
+  private prepareShutdown() {
     this.shutdownRequested = true
     this.restartDisabled = true
     this.restart.cancelDelay()
+  }
 
-    this.stopPromise = this.stopActiveTree(
-      options?.signal ?? 'SIGTERM',
-      options?.killAfterMs ?? 5000,
-    )
+  private beginShutdown(signal: KillSignal, killAfterMs: number) {
+    this.prepareShutdown()
 
-    return this.stopPromise
+    if (this.shutdownPromise) {
+      return this.shutdownPromise
+    }
+
+    this.shutdownPromise = this.stopActiveTree(signal, killAfterMs)
+    return this.shutdownPromise
   }
 
   cleanupFromExit() {
-    this.shutdownRequested = true
-    this.restartDisabled = true
-    this.restart.cancelDelay()
+    this.prepareShutdown()
 
     const child = this.currentChild
     if (child) {
@@ -252,10 +257,7 @@ class ProcbandProcessImpl
   }
 
   async cleanupFromSignal(signal: Signals) {
-    this.shutdownRequested = true
-    this.restartDisabled = true
-    this.restart.cancelDelay()
-    await this.stopActiveTree(this.getParentCleanupSignal(signal), 1000)
+    await this.beginShutdown(this.getParentCleanupSignal(signal), 1000)
   }
 
   private async stopActiveTree(signal: KillSignal, killAfterMs: number) {
@@ -572,6 +574,6 @@ function propagateFailure(exitCode: number) {
   }
 
   for (const proc of liveProcesses) {
-    void proc.stop().catch(() => {})
+    proc.kill()
   }
 }

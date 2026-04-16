@@ -8,7 +8,6 @@ export type {
   ProcbandProcess,
   RestartPolicy,
   RgbColor,
-  StopOptions,
   Unsubscribe,
   WaitForOptions,
 } from './types.js'
